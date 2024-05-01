@@ -87,8 +87,8 @@ class PropKB(KB):
 
     def ask_generator(self, query):
         """Yield the empty substitution {} if KB entails query; else no results."""
-        if tt_entails(Expr('&', *self.clauses), query):
-            yield {}
+        return tt_entails(Expr('&', *self.clauses), query)
+            #yield {}
 
     def ask_if_true(self, query):
         """Return True if the KB entails query, else return False."""
@@ -229,24 +229,30 @@ def tt_entails(kb, alpha):
     >>> tt_entails(expr('P & Q'), expr('Q'))
     True
     """
+    number_of_kb_models = 0
+    def increase_counter():
+        nonlocal number_of_kb_models
+        number_of_kb_models += 1
+
     assert not variables(alpha)
     symbols = list(prop_symbols(kb & alpha))
-    return tt_check_all(kb, alpha, symbols, {})
+    return (tt_check_all(kb, alpha, symbols, {}, increase_counter), number_of_kb_models)
 
 
-def tt_check_all(kb, alpha, symbols, model):
+def tt_check_all(kb, alpha, symbols, model, increment):
     """Auxiliary routine to implement tt_entails."""
     if not symbols:
         if pl_true(kb, model):
             result = pl_true(alpha, model)
             assert result in (True, False)
+            increment()
             return result
         else:
             return True
     else:
         P, rest = symbols[0], symbols[1:]
-        return (tt_check_all(kb, alpha, rest, extend(model, P, True)) and
-                tt_check_all(kb, alpha, rest, extend(model, P, False)))
+        return (tt_check_all(kb, alpha, rest, extend(model, P, True), increment) and
+                tt_check_all(kb, alpha, rest, extend(model, P, False), increment))
 
 
 def prop_symbols(x):
@@ -547,10 +553,13 @@ class PropDefiniteKB(PropKB):
         assert is_definite_clause(sentence), "Must be definite clause"
         self.clauses.append(sentence)
 
-    def ask_generator(self, query):
+    def ask_generator_fc(self, query):
         """Yield the empty substitution if KB implies query; else nothing."""
         if pl_fc_entails(self.clauses, query):
             yield {}
+    
+    def ask_generator_bc(self, query):
+        return pl_bc_entails(self, query)
 
     def retract(self, sentence):
         self.clauses.remove(sentence)
@@ -559,6 +568,13 @@ class PropDefiniteKB(PropKB):
         """Return a list of the clauses in KB that have p in their premise.
         This could be cached away for O(1) speed, but we'll recompute it."""
         return [c for c in self.clauses if c.op == '==>' and p in conjuncts(c.args[0])]
+    
+    def clauses_with_conclusion(self, con):
+        "Return a list of the clauses in KB that have con as the conclusion."
+        return [c for c in self.clauses if c.op == '==>' and con == c.args[1]]
+    
+
+
 
 
 def pl_fc_entails(kb, q):
@@ -582,6 +598,40 @@ def pl_fc_entails(kb, q):
                 if count[c] == 0:
                     agenda.append(c.args[1])
     return False
+
+def pl_bc_entails(kb, q):
+    """
+    Use backward chaining to see if a PropDefiniteKB entails symbol q.
+    """
+    inferred = {s for s in kb.clauses if is_prop_symbol(s.op)}
+    failed = set()
+    entailments = {q}
+
+    def backward_chaining_check(symbol, goal):
+        nonlocal inferred, failed, entailments
+        if symbol in inferred:
+            return True
+        if (symbol in failed) or (symbol in goal):
+            return False
+        
+        goal.append(symbol)
+        for c in kb.clauses_with_conclusion(symbol):
+            result = True
+            sub_goals = []
+            for p in conjuncts(c.args[0]):
+                sub_goals.append(p)
+                result = result and backward_chaining_check(p, goal)
+                if not result:
+                    break
+            if result == True:
+                entailments.update(sub_goals)
+                inferred.add(symbol)
+                return True
+        failed.add(symbol)
+        return False
+    
+    return (backward_chaining_check(q, []), entailments)
+    
 
 
 """
@@ -641,18 +691,18 @@ def is_variable(x):
     return isinstance(x, Expr) and not x.args and x.op[0].islower()
 
 
-kb = ['It_is_raining & ~I_have_an_umbrella => I_get_wet', 'It_is_raining', '~I_have_an_umbrella']
-print(kb2expr(kb))
+# kb = ['It_is_raining & ~I_have_an_umbrella => I_get_wet', 'It_is_raining', '~I_have_an_umbrella']
+# print(kb2expr(kb))
 
-query = 'I_get_wet'
-print(expr(query))
+# query = 'I_get_wet'
+# print(expr(query))
 
-print("Is query ", query, " entailed by the knowledge base ", kb, "?")
-print(tt_entails(kb2expr(kb), expr(query)))
+# print("Is query ", query, " entailed by the knowledge base ", kb, "?")
+# print(tt_entails(kb2expr(kb), expr(query)))
 
-kb2 = ['It_is_sweet \/ It_is_sour', '~It_is_sour']
+# kb2 = ['It_is_sweet \/ It_is_sour', '~It_is_sour']
 
-query2 = '~It_is_sweet'
+# query2 = '~It_is_sweet'
 
-print("Is query ", query2, " entailed by the knowledge base ", kb2, "?")
-print(tt_entails(kb2expr(kb2), expr(query2)))
+# print("Is query ", query2, " entailed by the knowledge base ", kb2, "?")
+# print(tt_entails(kb2expr(kb2), expr(query2)))
