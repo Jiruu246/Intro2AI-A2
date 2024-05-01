@@ -1,4 +1,4 @@
-from logic import PropDefiniteKB
+from logic import PropDefiniteKB, pl_fc_entails
 from utils import expr, Expr
 
 # p1, p2, p3, a, b, c = map(Expr, 'p1 p2 p3 a b c'.split())
@@ -37,4 +37,5 @@ for clause in ['(B & F) ==> E',
                'A', 'B', 'C']:
     definite_clauses_KB.tell(expr(clause))
 definite_clauses_KB.ask_generator(expr('F'))
+print(pl_fc_entails(definite_clauses_KB, expr('F')))
 # kb.ask_generator(expr(asks[0]))
