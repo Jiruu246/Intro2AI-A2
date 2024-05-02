@@ -117,6 +117,7 @@ def expr_handle_infix_or(x):
     return x
 
 def kb2expr(kb):
+    """Convert a knowledge base (a set of exprs) to an expr conjunction."""
     kb_expr = None
     for kb_sentence in kb:
         st = expr_handle_infix_imp(expr_handle_infix_or(kb_sentence))
@@ -550,7 +551,7 @@ class PropDefiniteKB(PropKB):
     def ask_generator(self, query):
         """Yield the empty substitution if KB implies query; else nothing."""
         if pl_fc_entails(self.clauses, query):
-            yield {}
+            yield {"hello"}
 
     def retract(self, sentence):
         self.clauses.remove(sentence)
@@ -641,18 +642,18 @@ def is_variable(x):
     return isinstance(x, Expr) and not x.args and x.op[0].islower()
 
 
-kb = ['It_is_raining & ~I_have_an_umbrella => I_get_wet', 'It_is_raining', '~I_have_an_umbrella']
-print(kb2expr(kb))
+# kb = ['It_is_raining & ~I_have_an_umbrella => I_get_wet', 'It_is_raining', '~I_have_an_umbrella']
+# print(kb2expr(kb))
 
-query = 'I_get_wet'
-print(expr(query))
+# query = 'I_get_wet'
+# print(expr(query))
 
-print("Is query ", query, " entailed by the knowledge base ", kb, "?")
-print(tt_entails(kb2expr(kb), expr(query)))
+# print("Is query ", query, " entailed by the knowledge base ", kb, "?")
+# print(tt_entails(kb2expr(kb), expr(query)))
 
-kb2 = ['It_is_sweet \/ It_is_sour', '~It_is_sour']
+# kb2 = ['It_is_sweet \/ It_is_sour', '~It_is_sour']
 
-query2 = '~It_is_sweet'
+# query2 = '~It_is_sweet'
 
-print("Is query ", query2, " entailed by the knowledge base ", kb2, "?")
-print(tt_entails(kb2expr(kb2), expr(query2)))
+# print("Is query ", query2, " entailed by the knowledge base ", kb2, "?")
+# print(tt_entails(kb2expr(kb2), expr(query2)))
