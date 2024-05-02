@@ -117,6 +117,7 @@ def expr_handle_infix_or(x):
     return x
 
 def kb2expr(kb):
+    """Convert a knowledge base (a set of exprs) to an expr conjunction."""
     kb_expr = None
     for kb_sentence in kb:
         st = expr_handle_infix_imp(expr_handle_infix_or(kb_sentence))
