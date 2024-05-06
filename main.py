@@ -2,7 +2,7 @@ from KB import PropDefiniteKB
 from kb_parser import parse_kb
 from inference_engine import foward_chaining
 
-tells, ask = parse_kb('tests/test1.txt')
+tells, ask = parse_kb('tests/test_HornKB.txt')
 print(tells)
 print(ask)
 kb = PropDefiniteKB()
