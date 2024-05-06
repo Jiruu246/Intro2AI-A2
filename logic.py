@@ -1,3 +1,5 @@
+"""This file is no longer needed, only exist for reference. the corresponding logic is moved to KB.py and expr_utils.py"""
+
 """
 Representations and Inference for Logic. (Chapters 7-9, 12)
 
