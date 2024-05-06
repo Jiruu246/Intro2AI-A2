@@ -42,23 +42,27 @@ def tt_check_all(kb, alpha, symbols, model):
                 tt_check_all(kb, alpha, rest, extend(model, P, False)))
         
 def backward_chaining(kb, q: Expr) -> tuple[bool, list]:
+    #improve performance
     agenda = set([s for s in kb.clauses if is_prop_symbol(s.op)])
-    return or_search(kb, q, [], agenda), [str(symbol).lower() for symbol in list(agenda) + [q]]
+    #improve performance
+    failed = set()
+    return or_search(kb, q, [], agenda, failed), [str(symbol).lower() for symbol in list(agenda) + [q]]
 
-def or_search(kb, q: Expr, goals, agenda) -> bool:
+def or_search(kb, q: Expr, goals, agenda, failed) -> bool:
     if q in agenda:
         return True
-    if q in goals:
+    if q in goals or q in failed:
         return False
     for clause in kb.clauses_with_conclusion(q):
-        result = and_search(kb, conjuncts(clause.args[0]), goals.copy() + [q], agenda)
+        result = and_search(kb, conjuncts(clause.args[0]), goals.copy() + [q], agenda, failed)
         if result:
             return True
+    failed.add(q)
     return False
 
-def and_search(kb, premise: list[Expr], goals, agenda) -> bool:
+def and_search(kb, premise: list[Expr], goals, agenda, failed) -> bool:
     for p in premise:
-        result = or_search(kb, p, goals, agenda)
+        result = or_search(kb, p, goals, agenda, failed)
         if result:
             agenda.add(p)
         else:
