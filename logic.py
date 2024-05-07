@@ -110,7 +110,7 @@ def expr_handle_infix_imp(x):
     x = x.replace(infix_imp, '==>')
     return x
 
-infix_or = '\/'
+infix_or = '||'
 
 def expr_handle_infix_or(x):
     x = x.replace(infix_or, '|')
@@ -245,7 +245,8 @@ def tt_check_all(kb, alpha, symbols, model, increment):
         if pl_true(kb, model):
             result = pl_true(alpha, model)
             assert result in (True, False)
-            increment()
+            if result:
+                increment()
             return result
         else:
             return True
@@ -385,7 +386,6 @@ def eliminate_implications(s):
     elif s.op == '<=>':
         return (a | ~b) & (b | ~a)
     elif s.op == '^':
-        assert len(args) == 2  # TODO: relax this restriction
         return (a & ~b) | (~a & b)
     else:
         assert s.op in ('&', '|', '~')
