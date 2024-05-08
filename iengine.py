@@ -1,5 +1,28 @@
-from logic import expr, expr_handle_infix_imp, expr_handle_infix_or, PropKB, PropDefiniteKB
+from KB_algo import PropKB, PropDefiniteKB
 import sys
+from utils import expr
+
+# ______________________________________________________________________________
+
+infix_imp = '=>'
+
+def expr_handle_infix_imp(x):
+    x = x.replace(infix_imp, '==>')
+    return x
+
+infix_or = '||'
+
+def expr_handle_infix_or(x):
+    x = x.replace(infix_or, '|')
+    return x
+
+infix_biconditional = '<==>'
+
+def expr_handle_infix_biconditional(x):
+    x = x.replace(infix_biconditional, '<=>')
+    return x
+
+# ______________________________________________________________________________
 
 # Read input from file
 def extract_input_file(filename):
@@ -22,17 +45,16 @@ def extract_input_file(filename):
 
 def TT_inference_engine(kbsentences, query):
     kb = PropKB()
-
     for sentence in kbsentences:
-        kb.tell(expr(expr_handle_infix_imp(expr_handle_infix_or(sentence))))
+        kb.tell(expr(expr_handle_infix_biconditional(expr_handle_infix_imp(expr_handle_infix_or(sentence)))))
 
-    return kb.ask_generator(expr(query))
+    return kb.ask_generator(expr(expr_handle_infix_biconditional(expr_handle_infix_imp(expr_handle_infix_or(query)))))
 
 def BC_inference_engine(kbsentences, query):
     kb = PropDefiniteKB()
 
     for sentence in kbsentences:
-        kb.tell(expr(expr_handle_infix_imp(expr_handle_infix_or(sentence))))
+        kb.tell(expr(expr_handle_infix_imp(sentence)))
 
     return kb.ask_generator_bc(expr(query))
 

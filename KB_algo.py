@@ -1,5 +1,5 @@
 """
-Representations and Inference for Logic. (Chapters 7-9, 12)
+Representations and Inference for Logic.
 
 Covers both Propositional and First-Order Logic. First we have four
 important data types:
@@ -7,7 +7,6 @@ important data types:
     KB            Abstract class holds a knowledge base of logical expressions
     KB_Agent      Abstract class subclasses agents.Agent
     Expr          A logical expression, imported from utils.py
-    substitution  Implemented as a dictionary of var:value pairs, {x:1, y:x}
 
 Be careful: some functions take an Expr as argument, and some take a KB.
 
@@ -21,26 +20,12 @@ Then we implement various functions for doing logical inference:
 
     pl_true          Evaluate a propositional logical sentence in a model
     tt_entails       Say if a statement is entailed by a KB
-    pl_resolution    Do resolution on propositional sentences
-    dpll_satisfiable See if a propositional sentence is satisfiable
-    WalkSAT          Try to find a solution for a set of clauses
-
-And a few other functions:
-
-    to_cnf           Convert to conjunctive normal form
-    unify            Do unification of two FOL sentences
-    diff, simp       Symbolic differentiation and simplification
+    fc
+    bc
 """
-
-import heapq
-import itertools
-import random
-from collections import defaultdict, Counter
-
-import networkx as nx
-
-from utils import remove_all, unique, first, probability, isnumber, issequence, Expr, expr, subexpressions, extend, infix_ops
-
+from collections import defaultdict
+from utils import remove_all, unique, first, Expr, subexpressions, extend
+from parser_utils import *
 
 class KB:
     """A knowledge base to which you can tell and ask sentences.
@@ -88,13 +73,6 @@ class PropKB(KB):
     def ask_generator(self, query):
         """Yield the empty substitution {} if KB entails query; else no results."""
         return tt_entails(Expr('&', *self.clauses), query)
-            #yield {}
-
-    def ask_if_true(self, query):
-        """Return True if the KB entails query, else return False."""
-        for _ in self.ask_generator(query):
-            return True
-        return False
 
     def retract(self, sentence):
         """Remove the sentence's clauses from the KB."""
@@ -102,57 +80,7 @@ class PropKB(KB):
             if c in self.clauses:
                 self.clauses.remove(c)
 
-
 # ______________________________________________________________________________
-infix_imp = '=>'
-
-def expr_handle_infix_imp(x):
-    x = x.replace(infix_imp, '==>')
-    return x
-
-infix_or = '||'
-
-def expr_handle_infix_or(x):
-    x = x.replace(infix_or, '|')
-    return x
-
-def kb2expr(kb):
-    kb_expr = None
-    for kb_sentence in kb:
-        st = expr_handle_infix_imp(expr_handle_infix_or(kb_sentence))
-        if kb_expr:
-            kb_expr += '&' + '(' + st + ')'
-        else:
-            kb_expr = '(' + st + ')'
-    return expr(kb_expr)
-
-# ______________________________________________________________________________
-
-
-def KBAgentProgram(kb):
-    """
-    [Figure 7.1]
-    A generic logical knowledge-based agent program.
-    """
-    steps = itertools.count()
-
-    def program(percept):
-        t = next(steps)
-        kb.tell(make_percept_sentence(percept, t))
-        action = kb.ask(make_action_query(t))
-        kb.tell(make_action_sentence(action, t))
-        return action
-
-    def make_percept_sentence(percept, t):
-        return Expr('Percept')(percept, t)
-
-    def make_action_query(t):
-        return expr('ShouldDo(action, {})'.format(t))
-
-    def make_action_sentence(action, t):
-        return Expr('Did')(action[expr('action')], t)
-
-    return program
 
 
 def is_symbol(s):
@@ -179,6 +107,10 @@ def is_prop_symbol(s):
     return is_symbol(s) and s[0].isupper()
 
 
+def is_variable(x):
+    """A variable is an Expr with no args and a lowercase symbol as the op."""
+    return isinstance(x, Expr) and not x.args and x.op[0].islower()
+
 def variables(s):
     """Return a set of the variables in expression s.
     >>> variables(expr('F(x, x) & G(x, y) & H(y, z) & R(A, z, 2)')) == {x, y, z}
@@ -202,23 +134,7 @@ def is_definite_clause(s):
     else:
         return False
 
-
-def parse_definite_clause(s):
-    """Return the antecedents and the consequent of a definite clause."""
-    assert is_definite_clause(s)
-    if is_symbol(s.op):
-        return [], s
-    else:
-        antecedent, consequent = s.args
-        return conjuncts(antecedent), consequent
-
-
-# Useful constant Exprs used in examples and code:
-A, B, C, D, E, F, G, P, Q, a, x, y, z, u = map(Expr, 'ABCDEFGPQaxyzu')
-
-
 # ______________________________________________________________________________
-
 
 def tt_entails(kb, alpha):
     """
@@ -264,35 +180,6 @@ def prop_symbols(x):
         return {x}
     else:
         return {symbol for arg in x.args for symbol in prop_symbols(arg)}
-
-
-def constant_symbols(x):
-    """Return the set of all constant symbols in x."""
-    if not isinstance(x, Expr):
-        return set()
-    elif is_prop_symbol(x.op) and not x.args:
-        return {x}
-    else:
-        return {symbol for arg in x.args for symbol in constant_symbols(arg)}
-
-
-def predicate_symbols(x):
-    """Return a set of (symbol_name, arity) in x.
-    All symbols (even functional) with arity > 0 are considered."""
-    if not isinstance(x, Expr) or not x.args:
-        return set()
-    pred_set = {(x.op, len(x.args))} if is_prop_symbol(x.op) else set()
-    pred_set.update({symbol for arg in x.args for symbol in predicate_symbols(arg)})
-    return pred_set
-
-
-def tt_true(s):
-    """Is a propositional sentence a tautology?
-    >>> tt_true('P | ~P')
-    True
-    """
-    s = expr(s)
-    return tt_entails(True, s)
 
 
 def pl_true(exp, model={}):
@@ -350,164 +237,10 @@ def pl_true(exp, model={}):
     else:
         raise ValueError('Illegal operator in logic expression' + str(exp))
 
-
-# ______________________________________________________________________________
-
-# Convert to Conjunctive Normal Form (CNF)
-
-
-def to_cnf(s):
-    """
-    [Page 253]
-    Convert a propositional logical sentence to conjunctive normal form.
-    That is, to the form ((A | ~B | ...) & (B | C | ...) & ...)
-    >>> to_cnf('~(B | C)')
-    (~B & ~C)
-    """
-    s = expr(s)
-    if isinstance(s, str):
-        s = expr(s)
-    s = eliminate_implications(s)  # Steps 1, 2 from p. 253
-    s = move_not_inwards(s)  # Step 3
-    return distribute_and_over_or(s)  # Step 4
-
-
-def eliminate_implications(s):
-    """Change implications into equivalent form with only &, |, and ~ as logical operators."""
-    s = expr(s)
-    if not s.args or is_symbol(s.op):
-        return s  # Atoms are unchanged.
-    args = list(map(eliminate_implications, s.args))
-    a, b = args[0], args[-1]
-    if s.op == '==>':
-        return b | ~a
-    elif s.op == '<==':
-        return a | ~b
-    elif s.op == '<=>':
-        return (a | ~b) & (b | ~a)
-    elif s.op == '^':
-        return (a & ~b) | (~a & b)
-    else:
-        assert s.op in ('&', '|', '~')
-        return Expr(s.op, *args)
-
-
-def move_not_inwards(s):
-    """Rewrite sentence s by moving negation sign inward.
-    >>> move_not_inwards(~(A | B))
-    (~A & ~B)
-    """
-    s = expr(s)
-    if s.op == '~':
-        def NOT(b):
-            return move_not_inwards(~b)
-
-        a = s.args[0]
-        if a.op == '~':
-            return move_not_inwards(a.args[0])  # ~~A ==> A
-        if a.op == '&':
-            return associate('|', list(map(NOT, a.args)))
-        if a.op == '|':
-            return associate('&', list(map(NOT, a.args)))
-        return s
-    elif is_symbol(s.op) or not s.args:
-        return s
-    else:
-        return Expr(s.op, *list(map(move_not_inwards, s.args)))
-
-
-def distribute_and_over_or(s):
-    """Given a sentence s consisting of conjunctions and disjunctions
-    of literals, return an equivalent sentence in CNF.
-    >>> distribute_and_over_or((A & B) | C)
-    ((A | C) & (B | C))
-    """
-    s = expr(s)
-    if s.op == '|':
-        s = associate('|', s.args)
-        if s.op != '|':
-            return distribute_and_over_or(s)
-        if len(s.args) == 0:
-            return False
-        if len(s.args) == 1:
-            return distribute_and_over_or(s.args[0])
-        conj = first(arg for arg in s.args if arg.op == '&')
-        if not conj:
-            return s
-        others = [a for a in s.args if a is not conj]
-        rest = associate('|', others)
-        return associate('&', [distribute_and_over_or(c | rest)
-                               for c in conj.args])
-    elif s.op == '&':
-        return associate('&', list(map(distribute_and_over_or, s.args)))
-    else:
-        return s
-
-
-def associate(op, args):
-    """Given an associative op, return an expression with the same
-    meaning as Expr(op, *args), but flattened -- that is, with nested
-    instances of the same op promoted to the top level.
-    >>> associate('&', [(A&B),(B|C),(B&C)])
-    (A & B & (B | C) & B & C)
-    >>> associate('|', [A|(B|(C|(A&B)))])
-    (A | B | C | (A & B))
-    """
-    args = dissociate(op, args)
-    if len(args) == 0:
-        return _op_identity[op]
-    elif len(args) == 1:
-        return args[0]
-    else:
-        return Expr(op, *args)
-
-
-_op_identity = {'&': True, '|': False, '+': 0, '*': 1}
-
-
-def dissociate(op, args):
-    """Given an associative op, return a flattened list result such
-    that Expr(op, *result) means the same as Expr(op, *args).
-    >>> dissociate('&', [A & B])
-    [A, B]
-    """
-    result = []
-
-    def collect(subargs):
-        for arg in subargs:
-            if arg.op == op:
-                collect(arg.args)
-            else:
-                result.append(arg)
-
-    collect(args)
-    return result
-
-
-def conjuncts(s):
-    """Return a list of the conjuncts in the sentence s.
-    >>> conjuncts(A & B)
-    [A, B]
-    >>> conjuncts(A | B)
-    [(A | B)]
-    """
-    return dissociate('&', [s])
-
-
-def disjuncts(s):
-    """Return a list of the disjuncts in the sentence s.
-    >>> disjuncts(A | B)
-    [A, B]
-    >>> disjuncts(A & B)
-    [(A & B)]
-    """
-    return dissociate('|', [s])
-
-
 # ______________________________________________________________________________
 
 
-def pl_resolution(kb, alpha):
+def pl_resolution(kb, alpha): #TODO: Delele this
     """
     [Figure 7.12]
     Propositional-logic resolution: say if alpha follows from KB.
@@ -574,9 +307,6 @@ class PropDefiniteKB(PropKB):
         return [c for c in self.clauses if c.op == '==>' and con == c.args[1]]
     
 
-
-
-
 def pl_fc_entails(kb, q):
     """
     [Figure 7.15]
@@ -631,78 +361,3 @@ def pl_bc_entails(kb, q):
         return False
     
     return (backward_chaining_check(q, []), entailments)
-    
-
-
-"""
-[Figure 7.13]
-Simple inference in a wumpus world example
-"""
-wumpus_world_inference = expr('(B11 <=> (P12 | P21))  &  ~B11')
-
-"""
-[Figure 7.16]
-Propositional Logic Forward Chaining example
-"""
-horn_clauses_KB = PropDefiniteKB()
-for clause in ['P ==> Q',
-               '(L & M) ==> P',
-               '(B & L) ==> M',
-               '(A & P) ==> L',
-               '(A & B) ==> L',
-               'A', 'B']:
-    horn_clauses_KB.tell(expr(clause))
-
-"""
-Definite clauses KB example
-"""
-definite_clauses_KB = PropDefiniteKB()
-for clause in ['(B & F) ==> E',
-               '(A & E & F) ==> G',
-               '(B & C) ==> F',
-               '(A & B) ==> D',
-               '(E & F) ==> H',
-               '(H & I) ==>J',
-               'A', 'B', 'C']:
-    definite_clauses_KB.tell(expr(clause))
-
-
-# Symbols
-
-def implies(lhs, rhs):
-    return Expr('==>', lhs, rhs)
-
-
-def equiv(lhs, rhs):
-    return Expr('<=>', lhs, rhs)
-
-
-# Helper Function
-
-def new_disjunction(sentences):
-    t = sentences[0]
-    for i in range(1, len(sentences)):
-        t |= sentences[i]
-    return t
-
-
-def is_variable(x):
-    """A variable is an Expr with no args and a lowercase symbol as the op."""
-    return isinstance(x, Expr) and not x.args and x.op[0].islower()
-
-
-# kb = ['It_is_raining & ~I_have_an_umbrella => I_get_wet', 'It_is_raining', '~I_have_an_umbrella']
-# print(kb2expr(kb))
-
-# query = 'I_get_wet'
-# print(expr(query))
-
-# print("Is query ", query, " entailed by the knowledge base ", kb, "?")
-# print(tt_entails(kb2expr(kb), expr(query)))
-
-# kb2 = ['It_is_sweet \/ It_is_sour', '~It_is_sour']
-
-# query2 = '~It_is_sweet'
-
-# print("Is query ", query2, " entailed by the knowledge base ", kb2, "?")
-# print(tt_entails(kb2expr(kb2), expr(query2)))
