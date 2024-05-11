@@ -694,14 +694,14 @@ def is_variable(x):
     return isinstance(x, Expr) and not x.args and x.op[0].islower()
 
 
-# kb = ['It_is_raining & ~I_have_an_umbrella => I_get_wet', 'It_is_raining', '~I_have_an_umbrella']
-# print(kb2expr(kb))
+kb = ['It_is_raining & ~I_have_an_umbrella => I_get_wet', 'It_is_raining', '~I_have_an_umbrella']
+print(kb2expr(kb))
 
-# query = 'I_get_wet'
-# print(expr(query))
+query = 'I_get_wet'
+print(expr(query))
 
-# print("Is query ", query, " entailed by the knowledge base ", kb, "?")
-# print(tt_entails(kb2expr(kb), expr(query)))
+print("Is query ", query, " entailed by the knowledge base ", kb, "?")
+print(tt_entails(kb2expr(kb), expr(query)))
 
 # kb2 = ['It_is_sweet \/ It_is_sour', '~It_is_sour']
 

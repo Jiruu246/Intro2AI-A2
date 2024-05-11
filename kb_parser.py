@@ -1,7 +1,7 @@
 from utils import Expr, expr
-from expr_utils import expr_handle_infix_imp
+from expr_utils import expr_handle_infix_imp, expr_handle_infix_or
 
-def parse_kb(filename) -> tuple[list[Expr], Expr]: 
+def parse_kb(filename) -> tuple[list[str], str]: 
     tells = []
     ask = None
     action = None
@@ -19,8 +19,9 @@ def parse_kb(filename) -> tuple[list[Expr], Expr]:
                 if action == 'TELL':
                     # format the implication operator and make format the propositional symbol
                     # only apply to PropKB
-                    tells.extend([expr(expr_handle_infix_imp(clause.upper())) for clause in list(filter(None, line.strip().split(';')))])
+                    tells.extend([expr_handle_infix_or(expr_handle_infix_imp(clause)) for clause in list(filter(None, line.strip().split(';')))])
                 elif action == 'ASK':
-                    ask = expr(line.strip().upper())
+                    #don't do upper bc not all kb are value symbol
+                    ask = line.strip()
                     
     return (tells, ask)

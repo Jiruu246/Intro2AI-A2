@@ -1,8 +1,17 @@
 from utils import expr, Expr, first, subexpressions
+import re
 
 def expr_handle_infix_imp(x):
-    x = x.replace('=>', '==>')
+    x = re.sub(r"(\b|\s)=>", '==>', x)
     return x 
+
+# print(expr_handle_infix_imp('A => B => C ==> D'))
+
+infix_or = '||'
+
+def expr_handle_infix_or(x):
+    x = x.replace(infix_or, '|')
+    return x
 
 def dissociate(op, args):
     """Given an associative op, return a flattened list result such
@@ -185,7 +194,7 @@ def prop_symbols(x):
         return {x}
     else:
         return {symbol for arg in x.args for symbol in prop_symbols(arg)}
-    
+
 def pl_true(exp, model={}):
     """Return True if the propositional logic expression is true in the model,
     and False if it is false. If the model does not specify the value for
