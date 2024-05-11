@@ -42,6 +42,15 @@ def conjuncts(s):
     """
     return dissociate('&', [s])
 
+def disjuncts(s):
+    """Return a list of the disjuncts in the sentence s.
+    >>> disjuncts(A | B)
+    [A, B]
+    >>> disjuncts(A & B)
+    [(A & B)]
+    """
+    return dissociate('|', [s])
+
 def is_symbol(s):
     """A string s is a symbol if it starts with an alphabetic char.
     >>> is_symbol('R2D2')

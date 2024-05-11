@@ -1,6 +1,6 @@
 from utils import extend, Expr, expr
 from collections import defaultdict, deque
-from expr_utils import conjuncts, is_prop_symbol, variables, prop_symbols, pl_true, to_cnf
+from expr_utils import conjuncts, disjuncts, is_prop_symbol, variables, prop_symbols, pl_true, to_cnf
 
 def foward_chaining(kb, q: Expr) -> tuple[bool, list]:
     count = {c: len(conjuncts(c.args[0])) for c in kb.clauses if c.op == '==>'}
@@ -70,45 +70,54 @@ def and_search(kb, premise: list[Expr], goals, agenda, failed) -> bool:
     return True
 
 def DPLL_Search(KB, q) -> tuple[bool, dict]: 
-    clauses = KB + conjuncts(to_cnf(~expr(q)))
-    symbols = list(prop_symbols(clauses))
-    satisfy, model = DPLL(clauses, symbols, {})
+    #use set to elimiate duplicates
+    sentence = to_cnf(Expr('&', *KB) & ~expr(q))
+    symbols = list(prop_symbols(sentence))
+    satisfy, model = DPLL(sentence, symbols, {})
     return not satisfy, model
     
-def DPLL(clauses, symbols, model) -> tuple[bool, dict]:
+def DPLL(sentence, symbols, model) -> tuple[bool, dict|None]:
 
     #not sure if this work with partial model
-    if not pl_true(clauses, model):
-        return False, model
+    if pl_true(sentence, model) == False:
+        return False, None
     
-    if pl_true(clauses, model) is True:
+    if pl_true(sentence, model) == True:
         return True, model
     
-    p, value = find_pure_symbol(clauses, symbols, model)
+    p, value = find_pure_symbol(sentence, symbols, model)
     if p:
-        return DPLL(clauses, [s for s in symbols if s != p], extend(model, p, value))
-    p, value = find_unit_clause(clauses, symbols, model)
+        return DPLL(sentence, [s for s in symbols if s != p], extend(model, p, value))
+    p, value = find_unit_clause(sentence, symbols, model)
     if p:
-        return DPLL(clauses, [s for s in symbols if s != p], extend(model, p, value))
+        return DPLL(sentence, [s for s in symbols if s != p], extend(model, p, value))
     
     p = symbols[0]
-    return (DPLL(clauses, [s for s in symbols if s != p], extend(model, p, True)) or
-            DPLL(clauses, [s for s in symbols if s != p], extend(model, p, False)))
     
-def find_pure_symbol(clauses, symbols, model) -> tuple[Expr, bool]:
+    branch1 = DPLL(sentence, [s for s in symbols if s != p], extend(model, p, True))
+    if branch1[0]:
+        return True, branch1[1]
+    branch2 = DPLL(sentence, [s for s in symbols if s != p], extend(model, p, False))
+    if branch2[0]:
+        return True, branch2[1]
+    
+    return False, None
+    
+def find_pure_symbol(sentence, symbols, model) -> tuple[Expr, bool]:
+    clauses = set(conjuncts(sentence))
     positive, negative = set(), set()
     for clause in clauses:
         #again not sure if this work with partial model
         if pl_true(clause, model):
             continue
-        for literal in clause.args:
+        for literal in disjuncts(clause):
             #This looks suspicious
-            if prop_symbols(literal) not in symbols:
+            if list(prop_symbols(literal))[0] not in symbols:
                 continue
             if literal.op == '~':
-                negative.add(prop_symbols(literal))
+                negative.add(literal.args[0])
             else:
-                positive.add(prop_symbols(literal))
+                positive.add(literal)
 
     for p in positive:
         if p not in negative:
@@ -118,11 +127,12 @@ def find_pure_symbol(clauses, symbols, model) -> tuple[Expr, bool]:
             return n, False
     return None, None
 
-def find_unit_clause(clauses, symbols, model) -> tuple[Expr, bool]:
+def find_unit_clause(sentence, symbols, model) -> tuple[Expr, bool]:
+    clauses = set(conjuncts(sentence))
     for clause in clauses:
         if pl_true(clause, model):
             continue
-        p = filter(lambda s: s in symbols , prop_symbols(clause))
-        if len(p) == 1:
-            return p[0], pl_true(clause, extend(model, p[0], True))
+        literals = [s for s in prop_symbols(clause) if s in symbols]
+        if len(literals) == 1:
+            return literals[0], pl_true(clause, extend(model, literals[0], True))
     return None, None

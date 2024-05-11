@@ -11,5 +11,5 @@ for sentence in tells:
     kb.tell(sentence)
 # print(kb.ask_generator_fc(ask))
 # print(kb.ask_generator_bc(ask))
-# print(DPLL_Search(kb.clauses, ask))
-print(tt_entails(kb.clauses, expr(ask.upper())))
+print(DPLL_Search(kb.clauses, ask))
+# print(tt_entails(kb.clauses, expr(ask.upper())))
