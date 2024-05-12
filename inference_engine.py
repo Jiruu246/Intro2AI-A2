@@ -107,11 +107,9 @@ def find_pure_symbol(sentence, symbols, model) -> tuple[Expr, bool]:
     clauses = set(conjuncts(sentence))
     positive, negative = set(), set()
     for clause in clauses:
-        #again not sure if this work with partial model
         if pl_true(clause, model):
             continue
         for literal in disjuncts(clause):
-            #This looks suspicious
             if list(prop_symbols(literal))[0] not in symbols:
                 continue
             if literal.op == '~':
