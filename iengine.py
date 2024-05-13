@@ -53,7 +53,11 @@ def inference_engine():
     if (method == 'TT'):
         result = kb.ask_generator_tt(expr(query))
     elif (method == 'BC'):
+        assert(isinstance(kb, PropDefiniteKB))
         result = kb.ask_generator_bc(expr(query))
+    elif (method == 'FC'):
+        assert(isinstance(kb, PropDefiniteKB))
+
     else:
         raise ValueError("Invalid method") 
     
@@ -63,7 +67,7 @@ def inference_engine():
     else:
         output += 'NO'
 
-    if result[1]:
+    if output == 'YES':
         output += f': {str(result[1]).lower()}'
 
     print(output)
