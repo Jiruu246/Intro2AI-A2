@@ -48,9 +48,9 @@ class KB:
 
     def ask(self, query):
         """Return a substitution that makes the query true, or, failing that, return False."""
-        return first(self.ask_generator(query), default=False)
+        return first(self.ask_generator_tt(query), default=False)
 
-    def ask_generator(self, query):
+    def ask_generator_tt(self, query):
         """Yield all the substitutions that make query true."""
         raise NotImplementedError
 
@@ -70,7 +70,7 @@ class PropKB(KB):
         """Add the sentence's clauses to the KB."""
         self.clauses.extend(conjuncts(to_cnf(sentence)))
 
-    def ask_generator(self, query):
+    def ask_generator_tt(self, query):
         """Yield the empty substitution {} if KB entails query; else no results."""
         return tt_entails(Expr('&', *self.clauses), query)
 
