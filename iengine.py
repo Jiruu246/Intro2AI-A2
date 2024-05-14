@@ -1,33 +1,22 @@
 from KB_algo import PropKB, PropDefiniteKB
 import sys
 from utils import expr
+import re
 
 # ______________________________________________________________________________
 
+infix_or = '||'
 infix_imp = '=>'
 
-def expr_handle_infix_imp(x):
-    x = x.replace(infix_imp, '==>')
-    return x
-
-infix_or = '||'
-
-def expr_handle_infix_or(x):
-    x = x.replace(infix_or, '|')
-    return x
-
-infix_biconditional = '<==>'
-
-def expr_handle_infix_biconditional(x):
-    x = x.replace(infix_biconditional, '<=>')
-    return x
+def expr_handle_infix(x):
+    return re.sub(r"(\b|\s)" + infix_imp, '==>', x.replace(infix_or, '|'))
 
 # ______________________________________________________________________________
 
 # Read input from file
 def extract_input_file(filename):
     with open(filename, "r") as file:
-        input_text = file.read().upper()
+        input_text = expr_handle_infix(file.read().upper())
 
     # Extracting TELL and ASK statements
     tell_start = input_text.find("TELL")
@@ -43,38 +32,41 @@ def extract_input_file(filename):
 
     return (KB, query)
 
-def TT_inference_engine(kbsentences, query):
-    kb = PropKB()
-    for sentence in kbsentences:
-        kb.tell(expr(expr_handle_infix_biconditional(expr_handle_infix_imp(expr_handle_infix_or(sentence)))))
-
-    return kb.ask_generator(expr(expr_handle_infix_biconditional(expr_handle_infix_imp(expr_handle_infix_or(query)))))
-
-def BC_inference_engine(kbsentences, query):
-    kb = PropDefiniteKB()
-
-    for sentence in kbsentences:
-        kb.tell(expr(expr_handle_infix_imp(sentence)))
-
-    return kb.ask_generator_bc(expr(query))
-
-
 def inference_engine():
     filename = sys.argv[1]
     method = sys.argv[2]
 
     (kb_sentences, query) = extract_input_file(filename)
-    if (method == 'TT'):
-        result = TT_inference_engine(kb_sentences, query)
-    elif (method == 'BC'):
-        result = BC_inference_engine(kb_sentences, query)
-        for element in result[1]:
-            element.op = element.op.lower() 
-    
-    if (result[0]):
-        print('{}{}'.format('YES: ', str(result[1])))
+
+    kb = None
+    if 'generic' in filename.lower() and method in ['TT', 'DPLL']:
+        kb = PropKB()
+    elif 'horn' in filename.lower():
+        kb = PropDefiniteKB()
     else:
-        print('NO')
+        raise ValueError("Invalid KB type or method not compatible with KB type.")
+    assert kb is not None
+
+    for kb_sentence in kb_sentences:
+        kb.tell(expr(kb_sentence))
+
+    if (method == 'TT'):
+        result = kb.ask_generator_tt(expr(query))
+    elif (method == 'BC'):
+        result = kb.ask_generator_bc(expr(query))
+    else:
+        raise ValueError("Invalid method") 
+    
+    output = ''
+    if result[0]:
+        output += 'YES'
+    else:
+        output += 'NO'
+
+    if result[1]:
+        output += f': {str(result[1]).lower()}'
+
+    print(output)
 
 if __name__ == "__main__":
     inference_engine()

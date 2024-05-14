@@ -70,7 +70,7 @@ class PropKB(KB):
         """Add the sentence's clauses to the KB."""
         self.clauses.extend(conjuncts(to_cnf(sentence)))
 
-    def ask_generator(self, query):
+    def ask_generator_tt(self, query):
         """Yield the empty substitution {} if KB entails query; else no results."""
         return tt_entails(Expr('&', *self.clauses), query)
 
