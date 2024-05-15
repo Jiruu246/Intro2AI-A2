@@ -57,6 +57,9 @@ def inference_engine():
         result = kb.ask_generator_bc(expr(query))
     elif (method == 'FC'):
         assert(isinstance(kb, PropDefiniteKB))
+        result = kb.ask_generator_fc(expr(query))
+    elif (method == 'DPLL'):
+        result = kb.ask_generator_dpll(expr(query))
 
     else:
         raise ValueError("Invalid method") 
@@ -67,7 +70,8 @@ def inference_engine():
     else:
         output += 'NO'
 
-    if output == 'YES':
+    #This is required since DPLL will output the partial model when the query is false
+    if result[1]:
         output += f': {str(result[1]).lower()}'
 
     print(output)

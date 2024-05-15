@@ -73,6 +73,9 @@ class PropKB(KB):
     def ask_generator_tt(self, query):
         """Yield the empty substitution {} if KB entails query; else no results."""
         return tt_entails(Expr('&', *self.clauses), query)
+    
+    def ask_generator_dpll(self, query):
+        return dpll_entails(self.clauses, query)
 
     def retract(self, sentence):
         """Remove the sentence's clauses from the KB."""
@@ -287,9 +290,7 @@ class PropDefiniteKB(PropKB):
         self.clauses.append(sentence)
 
     def ask_generator_fc(self, query):
-        """Yield the empty substitution if KB implies query; else nothing."""
-        if pl_fc_entails(self.clauses, query):
-            yield {}
+        return pl_fc_entails(self, query)
     
     def ask_generator_bc(self, query):
         return pl_bc_entails(self, query)
@@ -307,27 +308,24 @@ class PropDefiniteKB(PropKB):
         return [c for c in self.clauses if c.op == '==>' and con == c.args[1]]
     
 
-def pl_fc_entails(kb, q):
-    """
-    [Figure 7.15]
-    Use forward chaining to see if a PropDefiniteKB entails symbol q.
-    >>> pl_fc_entails(horn_clauses_KB, expr('Q'))
-    True
-    """
+def pl_fc_entails(kb, q: Expr) -> tuple[bool, list]:
     count = {c: len(conjuncts(c.args[0])) for c in kb.clauses if c.op == '==>'}
     inferred = defaultdict(bool)
     agenda = [s for s in kb.clauses if is_prop_symbol(s.op)]
     while agenda:
         p = agenda.pop()
         if p == q:
-            return True
+            return True, [str(symbol).lower() for symbol in set(agenda + list(inferred.keys()) + [p])]
         if not inferred[p]:
             inferred[p] = True
             for c in kb.clauses_with_premise(p):
                 count[c] -= 1
                 if count[c] == 0:
                     agenda.append(c.args[1])
-    return False
+                    #improve the performance by checking if the query is in the conclusion of the clause
+                    if c.args[1] == q:
+                        return True, [str(symbol).lower() for symbol in set(agenda + list(inferred.keys()) + [p])]
+    return False, None
 
 def pl_bc_entails(kb, q):
     """
@@ -361,3 +359,66 @@ def pl_bc_entails(kb, q):
         return False
     
     return (backward_chaining_check(q, []), entailments)
+
+def dpll_entails(KB, q) -> tuple[bool, dict]: 
+    sentence = to_cnf(Expr('&', *KB) & ~expr(q))
+    symbols = list(prop_symbols(sentence))
+    satisfy, model = DPLL(sentence, symbols, {})
+    return not satisfy, model
+    
+def DPLL(sentence, symbols, model) -> tuple[bool, dict|None]:
+    if pl_true(sentence, model) == False:
+        return False, None
+    
+    if pl_true(sentence, model) == True:
+        return True, model
+    
+    p, value = find_pure_symbol(sentence, symbols, model)
+    if p:
+        return DPLL(sentence, [s for s in symbols if s != p], extend(model, p, value))
+    p, value = find_unit_clause(sentence, symbols, model)
+    if p:
+        return DPLL(sentence, [s for s in symbols if s != p], extend(model, p, value))
+    
+    p = symbols[0]
+    
+    branch1 = DPLL(sentence, [s for s in symbols if s != p], extend(model, p, True))
+    if branch1[0]:
+        return True, branch1[1]
+    branch2 = DPLL(sentence, [s for s in symbols if s != p], extend(model, p, False))
+    if branch2[0]:
+        return True, branch2[1]
+    
+    return False, None
+    
+def find_pure_symbol(sentence, symbols, model) -> tuple[Expr, bool]:
+    clauses = set(conjuncts(sentence))
+    positive, negative = set(), set()
+    for clause in clauses:
+        if pl_true(clause, model):
+            continue
+        for literal in disjuncts(clause):
+            if list(prop_symbols(literal))[0] not in symbols:
+                continue
+            if literal.op == '~':
+                negative.add(literal.args[0])
+            else:
+                positive.add(literal)
+
+    for p in positive:
+        if p not in negative:
+            return p, True
+    for n in negative:
+        if n not in positive:
+            return n, False
+    return None, None
+
+def find_unit_clause(sentence, symbols, model) -> tuple[Expr, bool]:
+    clauses = set(conjuncts(sentence))
+    for clause in clauses:
+        if pl_true(clause, model):
+            continue
+        literals = [s for s in prop_symbols(clause) if s in symbols]
+        if len(literals) == 1:
+            return literals[0], pl_true(clause, extend(model, literals[0], True))
+    return None, None
