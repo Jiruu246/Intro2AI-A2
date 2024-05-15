@@ -9,7 +9,7 @@ infix_or = '||'
 infix_imp = '=>'
 
 def expr_handle_infix(x):
-    return re.sub(r"(?<!<)=>" + infix_imp, r'==>', x.replace(infix_or, '|'))
+    return re.sub(r"(?<!<)" + infix_imp, '==>', x.replace(infix_or, '|'))
 
 # ______________________________________________________________________________
 
