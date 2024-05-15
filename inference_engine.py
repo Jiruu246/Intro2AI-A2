@@ -77,7 +77,7 @@ def DPLL_Search(KB, q) -> tuple[bool, dict]:
     return not satisfy, model
     
 def DPLL(sentence, symbols, model) -> tuple[bool, dict|None]:
-
+    print('interation')
     #not sure if this work with partial model
     if pl_true(sentence, model) == False:
         return False, None
@@ -134,3 +134,6 @@ def find_unit_clause(sentence, symbols, model) -> tuple[Expr, bool]:
         if len(literals) == 1:
             return literals[0], pl_true(clause, extend(model, literals[0], True))
     return None, None
+
+sentence = expr('(~A | B | C) & (A | B | D) & (~A | ~C | ~D) & (B | C | D) & (B | ~C ) & (~C)')
+print(DPLL(sentence, list(prop_symbols(sentence)), {}))

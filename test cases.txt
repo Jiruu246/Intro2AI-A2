@@ -1,0 +1,55 @@
+test cases
+4 horn
+
+TELL
+e&c =>d; b&c&a =>d; a&d&c =>e; a&e =>b; b; e; d; 
+ASK
+c
+
+TELL: duplication
+b&b => c, b
+ASK
+c
+
+TELL: chain
+a => c, c=> b, a
+ASK
+b
+
+TELL: Cannot entails
+a => c, b
+ASK
+c
+
+TELL
+a => c, b
+ASK: don't exist
+d
+
+find a case where BC is better than FC
+TELL
+a
+a => f
+b => g
+f&g => d
+a
+b
+ASK
+d
+
+4 general
+
+TELL: biconditional is working
+a <=> b, b
+ASK
+a
+
+TELL: Infix or working
+(a||c) => b, a	
+ASK
+b
+
+find a case where DPLL is better than all other methods
+(~A | B | C) & (A | B | D) & (~A | ~C | ~D) & (B | C | D) & (B | ~E | F) & (E) 
+b: is pure -> 1, 2, 4 is true
+-> then a, c, d, is all pure so this is true
