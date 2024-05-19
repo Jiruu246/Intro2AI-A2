@@ -314,7 +314,7 @@ def pl_fc_entails(kb, q: Expr) -> tuple[bool, set]:
     agenda = [s for s in kb.clauses if is_prop_symbol(s.op)]
     while agenda:
         if q in agenda:
-            return True, set(agenda + list(inferred.keys()) + [p])
+            return True, set(agenda + list(inferred.keys()))
         p = agenda.pop()
         if not inferred[p]:
             inferred[p] = True
@@ -324,7 +324,7 @@ def pl_fc_entails(kb, q: Expr) -> tuple[bool, set]:
                     agenda.append(c.args[1])
                     #improve the performance by checking if the query is in the conclusion of the clause
                     if c.args[1] == q:
-                        return True, set(agenda + list(inferred.keys()) + [p])
+                        return True, set(agenda + list(inferred.keys()))
     return False, None
 
 def pl_bc_entails(kb, q):
