@@ -414,7 +414,7 @@ def find_unit_clause(sentence, symbols, model) -> tuple[Expr, bool]:
     for clause in clauses:
         if pl_true(clause, model):
             continue
-        literals = [s for s in prop_symbols(clause) if s in symbols]
+        literals = [prop_symbols(s) for s in disjuncts(clause) if prop_symbols(s) in symbols]
         if len(literals) == 1:
             return literals[0], pl_true(clause, extend(model, literals[0], True))
     return None, None
