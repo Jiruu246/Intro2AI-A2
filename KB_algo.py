@@ -304,14 +304,14 @@ class PropDefiniteKB(PropKB):
         return [c for c in self.clauses if c.op == '==>' and con == c.args[1]]
     
 
-def pl_fc_entails(kb, q: Expr) -> tuple[bool, list]:
+def pl_fc_entails(kb, q: Expr) -> tuple[bool, set]:
     count = {c: len(conjuncts(c.args[0])) for c in kb.clauses if c.op == '==>'}
     inferred = defaultdict(bool)
     agenda = [s for s in kb.clauses if is_prop_symbol(s.op)]
     while agenda:
+        if q in agenda:
+            return True, set(agenda + list(inferred.keys()))
         p = agenda.pop()
-        if p == q:
-            return True, [str(symbol).lower() for symbol in set(agenda + list(inferred.keys()) + [p])]
         if not inferred[p]:
             inferred[p] = True
             for c in kb.clauses_with_premise(p):
@@ -320,7 +320,7 @@ def pl_fc_entails(kb, q: Expr) -> tuple[bool, list]:
                     agenda.append(c.args[1])
                     #improve the performance by checking if the query is in the conclusion of the clause
                     if c.args[1] == q:
-                        return True, [str(symbol).lower() for symbol in set(agenda + list(inferred.keys()) + [p])]
+                        return True, set(agenda + list(inferred.keys()))
     return False, None
 
 def pl_bc_entails(kb, q):

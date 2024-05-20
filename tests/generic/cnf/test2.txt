@@ -1,0 +1,4 @@
+TELL
+(a || c) & (~a || ~c)
+ASK
+~b & a
