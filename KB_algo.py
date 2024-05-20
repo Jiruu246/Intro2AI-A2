@@ -225,8 +225,7 @@ def pl_true(exp, model={}):
     p, q = args
     if op == '==>':
         return pl_true(~p | q, model)
-    elif op == '<==':
-        return pl_true(p | ~q, model)
+
     pt = pl_true(p, model)
     if pt is None:
         return None
@@ -235,8 +234,6 @@ def pl_true(exp, model={}):
         return None
     if op == '<=>':
         return pt == qt
-    elif op == '^':  # xor or 'not equivalent'
-        return pt != qt
     else:
         raise ValueError('Illegal operator in logic expression' + str(exp))
 
@@ -299,8 +296,7 @@ class PropDefiniteKB(PropKB):
         self.clauses.remove(sentence)
 
     def clauses_with_premise(self, p):
-        """Return a list of the clauses in KB that have p in their premise.
-        This could be cached away for O(1) speed, but we'll recompute it."""
+        """Return a list of the clauses in KB that have p in their premise."""
         return [c for c in self.clauses if c.op == '==>' and p in conjuncts(c.args[0])]
     
     def clauses_with_conclusion(self, con):

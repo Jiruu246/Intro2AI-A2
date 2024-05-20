@@ -71,7 +71,7 @@ def inference_engine():
         output += 'NO'
 
     #This is required since DPLL will output the partial model when the query is false
-    if result[1]:
+    if result[1] and method == 'DPLL':
         output += f': {str(result[1]).lower()}'
 
     print(output)
