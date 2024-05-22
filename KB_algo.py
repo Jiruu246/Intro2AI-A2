@@ -60,7 +60,7 @@ class KB:
 
 
 class PropKB(KB):
-    """A KB for propositional logic. Inefficient, with no indexing."""
+    """A KB for propositional logic."""
 
     def __init__(self, sentence=None):
         super().__init__(sentence)
@@ -325,11 +325,11 @@ def pl_fc_entails(kb, q: Expr) -> tuple[bool, set]:
 
 def pl_bc_entails(kb, q):
     """
-    Use backward chaining to see if a PropDefiniteKB entails symbol q.
+    Use backward chaining to checks if a Horn KB entails symbol q.
     """
     inferred = {s for s in kb.clauses if is_prop_symbol(s.op)}
     failed = set()
-    entailments = {q}
+    entailments = {q} # Used to keep track of all symbols that have been entailed during the search
 
     def backward_chaining_check(symbol, goal):
         nonlocal inferred, failed, entailments
@@ -350,8 +350,10 @@ def pl_bc_entails(kb, q):
             if result == True:
                 entailments.update(sub_goals)
                 inferred.add(symbol)
+                goal.remove(symbol)
                 return True
         failed.add(symbol)
+        goal.remove(symbol)
         return False
     
     return (backward_chaining_check(q, []), entailments)
