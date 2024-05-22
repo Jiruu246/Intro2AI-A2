@@ -39,9 +39,9 @@ def inference_engine():
     (kb_sentences, query) = extract_input_file(filename)
 
     kb = None
-    if 'generic' in filename.lower() and method in ['TT', 'DPLL']:
+    if method in ['TT', 'DPLL']:
         kb = PropKB()
-    elif 'horn' in filename.lower():
+    elif method in ['FC', 'BC']:
         kb = PropDefiniteKB()
     else:
         raise ValueError("Invalid KB type or method not compatible with KB type.")
