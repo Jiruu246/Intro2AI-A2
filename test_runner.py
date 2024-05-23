@@ -3,6 +3,8 @@ from iengine import extract_input_file
 from KB_algo import PropKB, PropDefiniteKB
 from utils import expr
 
+""""This file is used for running the batch of test files in 1 go."""
+
 METHODS = ['TT', 'DPLL', 'BC', 'FC']
 
 content = ''

@@ -1,28 +1,3 @@
-"""
-Representations and Inference for Logic.
-
-Covers both Propositional and First-Order Logic. First we have four
-important data types:
-
-    KB            Abstract class holds a knowledge base of logical expressions
-    KB_Agent      Abstract class subclasses agents.Agent
-    Expr          A logical expression, imported from utils.py
-
-Be careful: some functions take an Expr as argument, and some take a KB.
-
-Logical expressions can be created with Expr or expr, imported from utils, TODO
-or with expr, which adds the capability to write a string that uses
-the connectives ==>, <==, <=>, or <=/=>. But be careful: these have the
-operator precedence of commas; you may need to add parens to make precedence work.
-See logic.ipynb for examples.
-
-Then we implement various functions for doing logical inference:
-
-    pl_true          Evaluate a propositional logical sentence in a model
-    tt_entails       Say if a statement is entailed by a KB
-    fc
-    bc
-"""
 from collections import defaultdict
 from utils import remove_all, unique, first, Expr, subexpressions, extend
 from parser_utils import *
@@ -30,13 +5,8 @@ from parser_utils import *
 class KB:
     """A knowledge base to which you can tell and ask sentences.
     To create a KB, first subclass this class and implement
-    tell, ask_generator, and retract. Why ask_generator instead of ask?
-    The book is a bit vague on what ask means --
-    For a Propositional Logic KB, ask(P & Q) returns True or False, but for an
-    FOL KB, something like ask(Brother(x, y)) might return many substitutions
-    such as {x: Cain, y: Abel}, {x: Abel, y: Cain}, {x: George, y: Jeb}, etc.
-    So ask_generator generates these one at a time, and ask either returns the
-    first one or returns False."""
+    tell, ask_generator, and retract.
+    For a Propositional Logic KB, ask(P & Q) returns True or False"""
 
     def __init__(self, sentence=None):
         if sentence:
@@ -60,14 +30,14 @@ class KB:
 
 
 class PropKB(KB):
-    """A KB for propositional logic."""
+    """A general KB for propositional logic."""
 
     def __init__(self, sentence=None):
         super().__init__(sentence)
         self.clauses = []
 
     def tell(self, sentence):
-        """Add the sentence's clauses to the KB."""
+        """Convert the sentence into CNF and add the sentence's clauses to the KB."""
         self.clauses.extend(conjuncts(to_cnf(sentence)))
 
     def ask_generator_tt(self, query):
@@ -238,56 +208,20 @@ def pl_true(exp, model={}):
 
 # ______________________________________________________________________________
 
-
-def pl_resolution(kb, alpha): #TODO: Delele this
-    """
-    Propositional-logic resolution: say if alpha follows from KB.
-    >>> pl_resolution(horn_clauses_KB, A)
-    True
-    """
-    clauses = kb.clauses + conjuncts(to_cnf(~alpha))
-    new = set()
-    while True:
-        n = len(clauses)
-        pairs = [(clauses[i], clauses[j])
-                 for i in range(n) for j in range(i + 1, n)]
-        for (ci, cj) in pairs:
-            resolvents = pl_resolve(ci, cj)
-            if False in resolvents:
-                return True
-            new = new.union(set(resolvents))
-        if new.issubset(set(clauses)):
-            return False
-        for c in new:
-            if c not in clauses:
-                clauses.append(c)
-
-
-def pl_resolve(ci, cj):
-    """Return all clauses that can be obtained by resolving clauses ci and cj."""
-    clauses = []
-    for di in disjuncts(ci):
-        for dj in disjuncts(cj):
-            if di == ~dj or ~di == dj:
-                clauses.append(associate('|', unique(remove_all(di, disjuncts(ci)) + remove_all(dj, disjuncts(cj)))))
-    return clauses
-
-
-# ______________________________________________________________________________
-
-
 class PropDefiniteKB(PropKB):
-    """A KB of propositional definite clauses."""
+    """A Horn KB for propositional definite clauses."""
 
     def tell(self, sentence):
-        """Add a definite clause to this KB."""
+        """Add a definite clause to this Horn KB."""
         assert is_definite_clause(sentence), "Must be definite clause"
         self.clauses.append(sentence)
 
     def ask_generator_fc(self, query):
+        """"Forward chaining method"""
         return pl_fc_entails(self, query)
     
     def ask_generator_bc(self, query):
+        """"Backward chaining method"""
         return pl_bc_entails(self, query)
 
     def retract(self, sentence):
@@ -303,6 +237,9 @@ class PropDefiniteKB(PropKB):
     
 
 def pl_fc_entails(kb, q: Expr) -> tuple[bool, set]:
+    """
+    Use forward chaining to checks if a Horn KB entails symbol q.
+    """
     count = {c: len(conjuncts(c.args[0])) for c in kb.clauses if c.op == '==>'}
     inferred = defaultdict(bool)
     agenda = [s for s in kb.clauses if is_prop_symbol(s.op)]
@@ -358,13 +295,15 @@ def pl_bc_entails(kb, q):
     return (backward_chaining_check(q, []), entailments)
 
 def dpll_entails(KB, q) -> tuple[bool, dict]: 
+    """
+    Use DPLL to checks if a Horn KB entails symbol q.
+    """
     sentence = to_cnf(Expr('&', *KB) & ~expr(q))
     symbols = list(prop_symbols(sentence))
     satisfy, model = DPLL(sentence, symbols, {})
     return not satisfy, model
     
 def DPLL(sentence, symbols, model) -> tuple[bool, dict|None]:
-    
     #Checking the truth value of the sentence for a given model (can be partial or complete)
     if pl_true(sentence, model) == False:
         return False, None
