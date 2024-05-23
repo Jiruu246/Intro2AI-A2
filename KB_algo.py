@@ -141,7 +141,6 @@ def is_definite_clause(s):
 
 def tt_entails(kb, alpha):
     """
-    [Figure 7.10]
     Does kb entail the sentence alpha? Use truth tables. For propositional
     kb's and sentences. Note that the 'kb' should be an Expr which is a
     conjunction of clauses.
@@ -242,7 +241,6 @@ def pl_true(exp, model={}):
 
 def pl_resolution(kb, alpha): #TODO: Delele this
     """
-    [Figure 7.12]
     Propositional-logic resolution: say if alpha follows from KB.
     >>> pl_resolution(horn_clauses_KB, A)
     True
@@ -309,6 +307,7 @@ def pl_fc_entails(kb, q: Expr) -> tuple[bool, set]:
     inferred = defaultdict(bool)
     agenda = [s for s in kb.clauses if is_prop_symbol(s.op)]
     while agenda:
+        # improve the performance by checking if the query is in the agenda
         if q in agenda:
             return True, set(agenda + list(inferred.keys()))
         p = agenda.pop()
@@ -365,6 +364,8 @@ def dpll_entails(KB, q) -> tuple[bool, dict]:
     return not satisfy, model
     
 def DPLL(sentence, symbols, model) -> tuple[bool, dict|None]:
+    
+    #Checking the truth value of the sentence for a given model (can be partial or complete)
     if pl_true(sentence, model) == False:
         return False, None
     
@@ -390,6 +391,7 @@ def DPLL(sentence, symbols, model) -> tuple[bool, dict|None]:
     return False, None
     
 def find_pure_symbol(sentence, symbols, model) -> tuple[Expr, bool]:
+    """Return a pure symbol and its value if the sentence has a pure symbol"""
     clauses = set(conjuncts(sentence))
     positive, negative = set(), set()
     for clause in clauses:
@@ -412,10 +414,12 @@ def find_pure_symbol(sentence, symbols, model) -> tuple[Expr, bool]:
     return None, None
 
 def find_unit_clause(sentence, symbols, model) -> tuple[Expr, bool]:
+    """Return a unit clause and its value if the sentence has a unit clause"""
     clauses = set(conjuncts(sentence))
     for clause in clauses:
         if pl_true(clause, model):
             continue
+        #clause is guaranteed not to be true at this point, so the literals can only either be false or unknown
         literals = [prop_symbols(s) for s in disjuncts(clause) if prop_symbols(s) in symbols]
         if len(literals) == 1:
             return literals[0], pl_true(clause, extend(model, literals[0], True))
